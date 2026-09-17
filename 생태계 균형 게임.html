@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>생태계 균형</title>
+<style>
+  :root{
+    --bg:#0e1d17;
+    --bg-deep:#0a1510;
+    --panel:#16291f;
+    --panel-line:#2b4536;
+    --ink:#eef1e6;
+    --ink-dim:#a9b8ab;
+    --ink-faint:#7c8b7e;
+    --stable:#4fae7c;
+    --warning:#dfa23f;
+    --danger:#d95a4c;
+    --collapse:#000000;
+    --gold:#d8c179;
+    --zone-collapse:rgba(255,255,255,0.85);
+    --zone-danger:rgba(217,90,76,0.6);
+    --zone-warning:rgba(223,162,63,0.55);
+    --zone-stable:rgba(79,174,124,0.45);
+    --font-display:Georgia,'Noto Serif KR','Nanum Myeongjo',serif;
+    --font-body:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+    --font-mono:'SFMono-Regular',Consolas,'Courier New',monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; width:100%; min-height:100%;
+    background:var(--bg); color:var(--ink);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior:none;
+    touch-action:manipulation;
+  }
+  #app{
+    min-height:100vh; min-height:100dvh;
+    display:flex; flex-direction:column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:
+      radial-gradient(ellipse at 20% -10%, #1b3527 0%, transparent 55%),
+      radial-gradient(ellipse at 100% 110%, #142c20 0%, transparent 50%),
+      var(--bg);
+  }
+  .screen{ flex:1; display:flex; flex-direction:column; padding:22px 18px 26px; max-width:560px; margin:0 auto; width:100%; }
+  .hidden{ display:none !important; }
+
+  /* ---------- Typography helpers ---------- */
+  h1.title{
+    font-family:var(--font-display);
+    font-size:clamp(28px,8vw,40px);
+    letter-spacing:0.5px;
+    margin:6px 0 2px;
+    color:var(--ink);
+    font-weight:700;
+  }
+  .subtitle{ color:var(--ink-dim); font-size:14.5px; line-height:1.6; margin:0 0 16px; }
+  .watermark{
+    font-size:12px; color:var(--ink-faint); letter-spacing:.2px;
+    margin:0 0 14px; opacity:.75;
+  }
+  .footnote{
+    font-size:11.5px; color:var(--ink-faint); line-height:1.55;
+    border-top:1px solid var(--panel-line); padding-top:10px; margin-top:auto;
+  }
+
+  /* ---------- Start screen ---------- */
+  .brand-row{ display:flex; align-items:baseline; gap:10px; }
+  .brand-row .icons{ font-size:20px; letter-spacing:2px; opacity:.85; }
+
+  .diff-list{ display:flex; flex-direction:column; gap:12px; margin:6px 0 18px; }
+  .diff-card{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    background:var(--panel); border:1.5px solid var(--panel-line); border-radius:10px;
+    padding:16px 18px; cursor:pointer; text-align:left;
+    color:var(--ink); font-family:var(--font-body);
+    transition:border-color .15s, background .15s, transform .1s;
+  }
+  .diff-card .d-name{ font-family:var(--font-display); font-size:19px; font-weight:700; }
+  .diff-card .d-desc{ font-size:12.5px; color:var(--ink-dim); margin-top:3px; }
+  .diff-card .d-time{ font-family:var(--font-mono); font-size:15px; color:var(--gold); white-space:nowrap; }
+  .diff-card:active{ transform:scale(0.98); }
+  .diff-card.selected{ border-color:var(--gold); background:#1d3324; }
+  .diff-card.selected .d-name{ color:var(--gold); }
+
+  .btn-primary{
+    display:block; width:100%; border:none; border-radius:10px;
+    background:var(--gold); color:#12200f;
+    font-family:var(--font-body); font-weight:700; font-size:18px;
+    padding:17px 0; margin-top:6px; cursor:pointer;
+    transition:opacity .15s, transform .1s;
+  }
+  .btn-primary:disabled{ opacity:.35; }
+  .btn-primary:not(:disabled):active{ transform:scale(0.98); }
+  .btn-secondary{
+    display:block; width:100%; border:1.5px solid var(--panel-line); border-radius:10px;
+    background:transparent; color:var(--ink);
+    font-family:var(--font-body); font-weight:600; font-size:15.5px;
+    padding:14px 0; margin-top:10px; cursor:pointer;
+  }
+  .btn-secondary:active{ transform:scale(0.98); }
+
+  /* ---------- Game screen ---------- */
+  #screen-game{ padding:14px 14px 18px; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .clock{ font-family:var(--font-mono); font-size:15px; color:var(--ink-dim); }
+  .clock b{ color:var(--ink); font-size:20px; letter-spacing:1px; }
+  .round-tag{ font-size:12px; color:var(--ink-faint); text-align:right; }
+
+  .warn-banner{
+    background:#3a1c17; border:1px solid var(--danger);
+    color:#ffd9d3; font-size:13.5px; font-weight:600;
+    padding:9px 12px; border-radius:8px; margin-bottom:10px;
+    text-align:center; animation:bannerPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes bannerPulse{ 0%,100%{opacity:1;} 50%{opacity:.55;} }
+
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:14px; }
+  .stat-card{
+    position:relative; overflow:hidden;
+    background:var(--panel); border:1.5px solid var(--panel-line); border-radius:12px;
+    padding:12px 12px 13px; transition:border-color .3s, background .3s;
+  }
+  .stat-card.state-stable{ border-color:var(--stable); }
+  .stat-card.state-warning{ border-color:var(--warning); }
+  .stat-card.state-danger{ border-color:var(--danger); }
+  .stat-card.state-collapse{ border-color:var(--collapse); background:#000; }
+  .stat-card.flash{ animation:cardFlash .55s ease; }
+  @keyframes cardFlash{
+    0%{ box-shadow:0 0 0 0 rgba(255,255,255,0); }
+    30%{ box-shadow:0 0 0 6px rgba(255,255,255,0.12); }
+    100%{ box-shadow:0 0 0 0 rgba(255,255,255,0); }
+  }
+  .stat-head{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-dim); }
+  .stat-head .ic{ font-size:16px; }
+  .stat-value-row{ display:flex; align-items:baseline; gap:6px; margin:2px 0 8px; }
+  .stat-value{
+    font-family:var(--font-mono); font-weight:700;
+    font-size:clamp(30px,9vw,40px); line-height:1;
+    color:var(--ink); transition:color .3s;
+  }
+  .stat-value.state-stable{ color:var(--stable); }
+  .stat-value.state-warning{ color:var(--warning); }
+  .stat-value.state-danger{ color:var(--danger); }
+  .stat-value.state-collapse{ color:#fff; }
+  .stat-state-label{ font-size:11.5px; font-weight:700; letter-spacing:.3px; }
+  .stat-state-label.state-stable{ color:var(--stable); }
+  .stat-state-label.state-warning{ color:var(--warning); }
+  .stat-state-label.state-danger{ color:var(--danger); }
+  .stat-state-label.state-collapse{ color:#fff; }
+
+  /* Gauge: static zone map (always visible) + a moving marker for the current value */
+  .gauge-track{
+    position:relative; height:16px; border-radius:8px;
+    background-color:#0c1a13;
+    background-image:linear-gradient(to right,
+      var(--zone-collapse) 0%, var(--zone-collapse) 1%,
+      var(--zone-danger) 1%, var(--zone-danger) 20%,
+      var(--zone-warning) 20%, var(--zone-warning) 40%,
+      var(--zone-stable) 40%, var(--zone-stable) 60%,
+      var(--zone-warning) 60%, var(--zone-warning) 80%,
+      var(--zone-danger) 80%, var(--zone-danger) 99%,
+      var(--zone-collapse) 99%, var(--zone-collapse) 100%
+    );
+    border:1px solid var(--panel-line);
+    overflow:visible;
+  }
+  .gauge-marker{
+    position:absolute; top:-3px; bottom:-3px; width:4px;
+    transform:translateX(-50%);
+    background:var(--ink); border-radius:2px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.4);
+    transition:left .35s ease, background .3s;
+  }
+  .gauge-marker::after{
+    content:''; position:absolute; left:50%; top:-7px; transform:translateX(-50%);
+    border-left:5px solid transparent; border-right:5px solid transparent;
+    border-top:6px solid var(--ink);
+  }
+  .gauge-marker.state-stable{ background:var(--stable); }
+  .gauge-marker.state-stable::after{ border-top-color:var(--stable); }
+  .gauge-marker.state-warning{ background:var(--warning); }
+  .gauge-marker.state-warning::after{ border-top-color:var(--warning); }
+  .gauge-marker.state-danger{ background:var(--danger); }
+  .gauge-marker.state-danger::after{ border-top-color:var(--danger); }
+  .gauge-marker.state-collapse{ background:#fff; }
+  .gauge-marker.state-collapse::after{ border-top-color:#fff; }
+  .gauge-track.pulse{ animation:gaugePulse .5s ease; }
+  @keyframes gaugePulse{ 0%,100%{ filter:none; } 50%{ filter:brightness(1.7); } }
+
+  .pop-num{
+    position:absolute; right:12px; top:8px;
+    font-family:var(--font-mono); font-weight:700; font-size:16px;
+    pointer-events:none; animation:popFloat 1s ease-out forwards;
+  }
+  .pop-num.pos{ color:var(--stable); }
+  .pop-num.neg{ color:var(--danger); }
+  @keyframes popFloat{
+    0%{ transform:translateY(0); opacity:0; }
+    15%{ opacity:1; transform:translateY(-2px) scale(1.15); }
+    100%{ transform:translateY(-26px) scale(1); opacity:0; }
+  }
+
+  /* ---------- Event / choice area ---------- */
+  .choice-header{ display:flex; align-items:center; justify-content:space-between; margin:4px 0 8px; }
+  .choice-title{ font-size:13px; color:var(--ink-dim); }
+  .countdown-wrap{ flex:1; margin:0 10px; height:6px; background:#0c1a13; border-radius:4px; overflow:hidden; border:1px solid var(--panel-line); }
+  .countdown-bar{ height:100%; background:var(--gold); width:100%; transition:width .1s linear; }
+  .countdown-num{ font-family:var(--font-mono); font-size:13px; color:var(--gold); min-width:26px; text-align:right; }
+
+  .choices{ display:flex; flex-direction:column; gap:10px; }
+  .choice-btn{
+    text-align:left; width:100%; border-radius:12px; cursor:pointer;
+    background:var(--panel); border:1.5px solid var(--panel-line); color:var(--ink);
+    padding:14px 15px; font-family:var(--font-body);
+    transition:border-color .12s, background .12s, transform .08s;
+  }
+  .choice-btn:active{ transform:scale(0.98); background:#1c3325; }
+  .choice-btn .c-name{ font-size:16px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:7px; }
+  .choice-btn .c-effects{ display:flex; flex-wrap:wrap; gap:6px 10px; }
+  .eff-pill{
+    font-family:var(--font-mono); font-size:12.5px;
+    padding:3px 8px; border-radius:20px; background:#0f2018; border:1px solid var(--panel-line);
+    color:var(--ink-dim); white-space:nowrap;
+  }
+  .eff-pill.up{ color:var(--stable); border-color:rgba(79,174,124,.4); }
+  .eff-pill.down{ color:var(--danger); border-color:rgba(217,90,76,.4); }
+
+  .toast{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%);
+    background:#1c3325; border:1px solid var(--gold); color:var(--gold);
+    font-size:13.5px; font-weight:600; padding:10px 16px; border-radius:20px;
+    opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:50;
+    max-width:90%; text-align:center;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(-6px); }
+
+  /* ---------- End screen ---------- */
+  #screen-end{ align-items:center; justify-content:center; text-align:center; }
+  #screen-end.collapse-flash{ animation:collapseFlash .5s ease; }
+  @keyframes collapseFlash{
+    0%{ background:#ffffff; }
+    100%{ background:transparent; }
+  }
+  .end-emoji{ font-size:52px; margin-bottom:6px; }
+  .end-title{ font-family:var(--font-display); font-size:clamp(24px,7vw,32px); margin:0 0 8px; }
+  .end-title.ok{ color:var(--stable); }
+  .end-title.bad{ color:var(--danger); }
+  .end-time{ font-family:var(--font-mono); font-size:34px; color:var(--gold); margin:8px 0 14px; }
+  .end-desc{ color:var(--ink-dim); font-size:14px; margin-bottom:18px; line-height:1.6; }
+
+  .end-stats-title{ font-size:12.5px; color:var(--ink-faint); margin-bottom:8px; }
+  .end-stats{ display:grid; grid-template-columns:1fr 1fr; gap:8px; width:100%; margin-bottom:24px; }
+  .end-stat-card{
+    background:var(--panel); border:1.5px solid var(--panel-line); border-radius:10px;
+    padding:10px 8px; text-align:center;
+  }
+  .end-stat-card.cause{ border-color:var(--danger); background:#241614; }
+  .end-stat-card .es-head{ font-size:12px; color:var(--ink-dim); margin-bottom:2px; }
+  .end-stat-card .es-value{ font-family:var(--font-mono); font-weight:700; font-size:24px; }
+  .end-stat-card .es-tag{ font-size:10.5px; margin-top:2px; color:var(--danger); font-weight:700; }
+
+  .end-buttons{ width:100%; }
+
+  @media (max-width:340px){
+    .stat-value{ font-size:26px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ START SCREEN ============ -->
+  <section class="screen" id="screen-start">
+    <div class="brand-row"><span class="icons">🌱🐇🦊🦠</span></div>
+    <h1 class="title">생태계 균형</h1>
+    <p class="watermark">잠실고 2학년 생태와 환경 · 정현민 선생님</p>
+    <p class="subtitle">생산자 · 초식동물 · 육식동물 · 분해자, 네 요소는 서로 연결되어 있습니다.<br>환경 사건을 선택하며 3분(180초) 동안 생태계가 무너지지 않도록 지켜보세요.</p>
+
+    <div class="diff-list" id="diff-list">
+      <button class="diff-card" data-diff="EASY">
+        <div>
+          <div class="d-name">EASY</div>
+          <div class="d-desc">여유롭게 판단할 수 있어요</div>
+        </div>
+        <div class="d-time">8초</div>
+      </button>
+      <button class="diff-card" data-diff="NORMAL">
+        <div>
+          <div class="d-name">NORMAL</div>
+          <div class="d-desc">적당한 긴장감으로 진행돼요</div>
+        </div>
+        <div class="d-time">6초</div>
+      </button>
+      <button class="diff-card" data-diff="HARD">
+        <div>
+          <div class="d-name">HARD</div>
+          <div class="d-desc">빠른 판단이 필요해요</div>
+        </div>
+        <div class="d-time">4초</div>
+      </button>
+      <button class="diff-card" data-diff="EXTREME">
+        <div>
+          <div class="d-name">EXTREME</div>
+          <div class="d-desc">거의 반사적으로 선택해야 해요</div>
+        </div>
+        <div class="d-time">2초</div>
+      </button>
+    </div>
+
+    <button class="btn-primary" id="btn-start" disabled>게임 시작</button>
+
+    <p class="footnote">※ 이 게임은 실제 생태계의 수치를 정확히 재현한 시뮬레이션이 아니라, 생태계 구성 요소 사이의 상호작용과 평형 개념을 체험하기 위해 단순화한 게임 모델입니다.</p>
+  </section>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <section class="screen hidden" id="screen-game">
+    <div class="topbar">
+      <div class="clock">생존 <b id="survival-time">00:00</b> <span style="color:var(--ink-faint)">/ 03:00</span></div>
+      <div class="round-tag" id="round-tag">이벤트 1</div>
+    </div>
+
+    <div class="warn-banner hidden" id="warn-banner">⚠️ 생태계 불안정 — 위험 구간에 진입한 요소가 있습니다</div>
+
+    <div class="stat-grid" id="stat-grid"><!-- stat cards injected --></div>
+
+    <div class="choice-header">
+      <span class="choice-title">사건 선택</span>
+      <div class="countdown-wrap"><div class="countdown-bar" id="countdown-bar"></div></div>
+      <span class="countdown-num" id="countdown-num">8</span>
+    </div>
+
+    <div class="choices" id="choices"><!-- choice buttons injected --></div>
+  </section>
+
+  <!-- ============ END SCREEN ============ -->
+  <section class="screen hidden" id="screen-end">
+    <div class="end-emoji" id="end-emoji">🌍</div>
+    <h2 class="end-title" id="end-title">생태계 균형 유지 성공!</h2>
+    <div class="end-time" id="end-time">03:00</div>
+    <p class="end-desc" id="end-desc">3분 동안 생태계의 균형을 성공적으로 유지했습니다.</p>
+
+    <div class="end-stats-title" id="end-stats-title">붕괴 순간의 각 요소 수치</div>
+    <div class="end-stats" id="end-stats"><!-- final stat snapshot injected --></div>
+
+    <div class="end-buttons">
+      <button class="btn-primary" id="btn-restart">다시 하기</button>
+      <button class="btn-secondary" id="btn-to-start">난이도 선택으로</button>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Data ---------------- */
+  var STAT_KEYS = ['producer','herbivore','carnivore','decomposer'];
+  var STAT_INFO = {
+    producer:  {name:'생산자',   icon:'🌱'},
+    herbivore: {name:'초식동물', icon:'🐇'},
+    carnivore: {name:'육식동물', icon:'🦊'},
+    decomposer:{name:'분해자',   icon:'🦠'}
+  };
+
+  // ef(stat, min, max): the ACTUAL change bounds for that stat.
+  // min/max can both be positive (increase), both negative (decrease),
+  // or straddle zero (unpredictable events). Actual delta each time an
+  // event appears is randInt(min, max).
+  function ef(stat, min, max){ return {stat:stat, min:min, max:max}; }
+
+  var EVENTS = [
+    {id:1,  icon:'🌧️', name:'봄비가 내렸다',              effects:[ef('producer',5,10), ef('herbivore',0,5)]},
+    {id:2,  icon:'☀️', name:'일조량 증가',                effects:[ef('producer',8,15), ef('decomposer',-8,-3)]},
+    {id:3,  icon:'🌳', name:'대규모 식생 복원',            effects:[ef('producer',10,20), ef('herbivore',-10,-5), ef('decomposer',-10,-5)]},
+    {id:4,  icon:'🏭', name:'대기오염 증가',               effects:[ef('producer',-20,-10), ef('herbivore',-10,-5)]},
+    {id:5,  icon:'🌾', name:'풍년',                        effects:[ef('producer',15,20), ef('herbivore',5,10), ef('decomposer',5,10)]},
+    {id:6,  icon:'🔥', name:'산불 발생',                   effects:[ef('producer',-25,-15), ef('herbivore',-15,-5), ef('decomposer',5,15)]},
+    {id:7,  icon:'🌱', name:'새로운 식물종 정착',          effects:[ef('producer',10,15), ef('herbivore',-10,-5)]},
+    {id:8,  icon:'🏜️', name:'가뭄',                       effects:[ef('producer',-20,-10), ef('herbivore',-15,-5), ef('decomposer',-10,-5)]},
+    {id:9,  icon:'🐇', name:'초식동물 대증식',             effects:[ef('herbivore',10,20), ef('producer',-15,-10)]},
+    {id:10, icon:'🥬', name:'먹이 풍부',                   effects:[ef('herbivore',5,15), ef('producer',-10,-5)]},
+    {id:11, icon:'🦠', name:'초식동물 전염병',             effects:[ef('herbivore',-25,-15), ef('decomposer',5,15)]},
+    {id:12, icon:'🦅', name:'포식자 감소',                 effects:[ef('herbivore',10,20), ef('carnivore',-20,-10)]},
+    {id:13, icon:'🚜', name:'서식지 축소',                 effects:[ef('herbivore',-20,-10), ef('producer',5,10)]},
+    {id:14, icon:'🐇', name:'번식기 도래',                 effects:[ef('herbivore',8,15), ef('carnivore',3,8), ef('producer',-10,-5)]},
+    {id:15, icon:'☠️', name:'먹이 부족',                   effects:[ef('herbivore',-20,-10), ef('decomposer',5,10)]},
+    {id:16, icon:'🌿', name:'초식동물의 먹이 선택 변화',   effects:[ef('herbivore',5,10), ef('producer',-20,-10)]},
+    {id:17, icon:'🐺', name:'포식자 보호',                 effects:[ef('carnivore',5,10), ef('herbivore',-20,-10)]},
+    {id:18, icon:'🦊', name:'포식자 대증식',               effects:[ef('carnivore',10,20), ef('herbivore',-20,-15)]},
+    {id:19, icon:'🦠', name:'포식자 전염병',               effects:[ef('carnivore',-25,-15), ef('decomposer',5,15)]},
+    {id:20, icon:'🏹', name:'불법 포획',                   effects:[ef('carnivore',-20,-10), ef('herbivore',5,15)]},
+    {id:21, icon:'🐇', name:'먹이 증가',                   effects:[ef('carnivore',5,15), ef('herbivore',-10,-5)]},
+    {id:22, icon:'🌲', name:'포식자 서식지 확대',          effects:[ef('carnivore',8,15), ef('herbivore',-15,-5)]},
+    {id:23, icon:'🧑', name:'인간과의 갈등',               effects:[ef('carnivore',-20,-10), ef('herbivore',5,10)]},
+    {id:24, icon:'🦊', name:'최상위 포식자의 경쟁자 등장', effects:[ef('carnivore',-15,-5), ef('decomposer',5,10)]},
+    {id:25, icon:'🍂', name:'낙엽이 쌓였다',               effects:[ef('decomposer',10,20), ef('producer',-8,-3)]},
+    {id:26, icon:'☠️', name:'대량 폐사',                   effects:[ef('producer',-15,-5), ef('herbivore',-15,-5), ef('carnivore',-15,-5), ef('decomposer',15,25)]},
+    {id:27, icon:'🦠', name:'분해자 번성',                 effects:[ef('decomposer',10,20), ef('producer',5,10)]},
+    {id:28, icon:'🧪', name:'토양 오염',                   effects:[ef('decomposer',-25,-15), ef('producer',-15,-5)]},
+    {id:29, icon:'🌡️', name:'토양 환경 악화',             effects:[ef('decomposer',-20,-10), ef('producer',-10,-5)]},
+    {id:30, icon:'🍖', name:'유기물 유입',                 effects:[ef('decomposer',10,20), ef('producer',-10,-5)]},
+    {id:31, icon:'🧫', name:'새로운 미생물 출현',          effects:[ef('decomposer',5,15), ef('producer',5,10)]},
+    {id:32, icon:'🏭', name:'독성 물질 유입',              effects:[ef('decomposer',-20,-10), ef('producer',-15,-5)]},
+    {id:33, icon:'🌧️', name:'집중호우',                   effects:[ef('producer',-15,-5), ef('herbivore',-10,-5), ef('decomposer',5,15)]},
+    {id:34, icon:'🌡️', name:'이상 고온',                  effects:[ef('producer',-20,-10), ef('herbivore',-10,-5), ef('decomposer',5,10)]},
+    {id:35, icon:'🌲', name:'대규모 산림 조성',            effects:[ef('producer',15,25), ef('herbivore',5,10), ef('decomposer',-10,-5)]},
+    {id:36, icon:'☠️', name:'생태계 독성 물질 유입',       effects:[ef('producer',-20,-10), ef('herbivore',-20,-10), ef('carnivore',-15,-5), ef('decomposer',-20,-10)]},
+    {id:37, icon:'🌿', name:'먹이망 풍부화',               effects:[ef('producer',10,15), ef('herbivore',5,10), ef('carnivore',5,10), ef('decomposer',5,10)]},
+    {id:38, icon:'💥', name:'대규모 환경 교란',            effects:[ef('producer',-20,-10), ef('herbivore',-20,-10), ef('carnivore',-20,-10), ef('decomposer',10,20)]},
+    {id:39, icon:'🦠', name:'새로운 질병 확산',            effects:[ef('producer',-10,-5), ef('herbivore',-20,-10), ef('carnivore',-20,-10), ef('decomposer',10,20)]},
+    {id:40, icon:'🌍', name:'생태계 회복 프로젝트',        effects:[ef('producer',10,20), ef('herbivore',5,10), ef('carnivore',5,10), ef('decomposer',5,10)]},
+    {id:41, icon:'🌱', name:'생태계 복원 성공',            effects:[ef('producer',10,20), ef('herbivore',5,10), ef('decomposer',5,10)]},
+    {id:42, icon:'🦠', name:'토양 유기물 증가',            effects:[ef('producer',5,15), ef('decomposer',10,20)]},
+    {id:43, icon:'🌧️', name:'적당한 비',                  effects:[ef('producer',8,15), ef('herbivore',3,8), ef('decomposer',3,8)]},
+    {id:44, icon:'🐾', name:'서식지 연결',                 effects:[ef('herbivore',5,12), ef('carnivore',5,12), ef('producer',3,8)]},
+    {id:45, icon:'🌿', name:'외래종 제거 성공',            effects:[ef('producer',8,15), ef('herbivore',5,10), ef('carnivore',3,8), ef('decomposer',3,8)]},
+    {id:46, icon:'🐇', name:'먹이망 안정화',               effects:[ef('producer',5,10), ef('herbivore',5,10), ef('carnivore',5,10), ef('decomposer',5,10)]},
+    {id:47, icon:'🌳', name:'대규모 식생 회복',            effects:[ef('producer',15,25), ef('herbivore',5,10), ef('decomposer',5,10), ef('carnivore',-7,-3)]},
+    {id:48, icon:'🦊', name:'포식자-피식자 균형 회복',     effects:[ef('carnivore',8,15), ef('herbivore',5,10), ef('producer',-5,-3)]},
+    {id:49, icon:'🪱', name:'토양 생물 다양성 증가',       effects:[ef('decomposer',10,20), ef('producer',5,10), ef('herbivore',-5,-2)]},
+    {id:51, icon:'🌦️', name:'변덕스러운 날씨',            effects:[ef('producer',-10,10), ef('herbivore',-5,5)]},
+    {id:52, icon:'🌱', name:'새로운 먹이원 발견',          effects:[ef('producer',-5,10), ef('herbivore',-5,15), ef('carnivore',-3,8)]},
+    {id:53, icon:'🦠', name:'미생물 활동 변화',            effects:[ef('decomposer',-10,15), ef('producer',-5,10)]},
+    {id:54, icon:'🐾', name:'야생동물 이동',               effects:[ef('herbivore',-10,10), ef('carnivore',-10,10)]},
+    {id:55, icon:'🌍', name:'생태계의 예상 밖 변화',       effects:[ef('producer',-8,8), ef('herbivore',-8,8), ef('carnivore',-8,8), ef('decomposer',-8,8)]},
+    {id:56, icon:'☣️', name:'토양 독성 물질 축적',         effects:[ef('decomposer',-25,-15), ef('producer',-10,-5)]},
+    {id:57, icon:'🏜️', name:'장기 가뭄',                  effects:[ef('decomposer',-20,-10), ef('producer',-20,-10), ef('herbivore',-10,-5)]},
+    {id:58, icon:'🧪', name:'토양 산성화',                 effects:[ef('decomposer',-25,-15), ef('producer',-15,-5)]},
+    {id:59, icon:'🗑️', name:'생분해되지 않는 폐기물 증가', effects:[ef('decomposer',-20,-10), ef('producer',-10,-5)]},
+    {id:60, icon:'🌊', name:'토양 침수',                   effects:[ef('decomposer',-20,-10), ef('producer',-15,-5), ef('herbivore',-8,-3)]}
+  ];
+
+  // Group events by number of affected stats (their natural complexity tier)
+  var EVENTS_BY_TIER = {};
+  EVENTS.forEach(function(ev){
+    var tier = ev.effects.length;
+    if(!EVENTS_BY_TIER[tier]) EVENTS_BY_TIER[tier] = [];
+    EVENTS_BY_TIER[tier].push(ev);
+  });
+
+  // Difficulty configuration. Tier weights approximate the requested
+  // 1/2/3/4-factor distribution; since the event pool has no single-factor
+  // events, that share is folded into the 2-factor tier.
+  var DIFFICULTY_LABEL = {EASY:'EASY (쉬움)', NORMAL:'NORMAL (보통)', HARD:'HARD (어려움)', EXTREME:'EXTREME (극한)'};
+
+  var DIFFICULTY = {
+    EASY:    {seconds:8, tierWeights:{2:90, 3:7,  4:3}},
+    NORMAL:  {seconds:6, tierWeights:{2:70, 3:25, 4:5}},
+    HARD:    {seconds:4, tierWeights:{2:40, 3:40, 4:20}},
+    EXTREME: {seconds:2, tierWeights:{2:40, 3:40, 4:20}}
+  };
+
+  var GOAL_SECONDS = 180;
+
+  /* ---------------- Helpers ---------------- */
+  function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+  function clamp(v){ return Math.max(0, Math.min(100, v)); }
+  function pad2(n){ return (n<10?'0':'')+n; }
+  function fmtTime(sec){ return pad2(Math.floor(sec/60))+':'+pad2(sec%60); }
+  function fmtDelta(d){ return d>0 ? ('+'+d) : String(d); }
+
+  function getState(v){
+    if(v<=0 || v>=100) return 'collapse';
+    if(v>=40 && v<=60) return 'stable';
+    if((v>=20&&v<=39)||(v>=61&&v<=80)) return 'warning';
+    return 'danger'; // 1-19 or 81-99
+  }
+  var STATE_LABEL = {stable:'안정', warning:'경고', danger:'위험', collapse:'붕괴'};
+
+  function weightedPick(weights){
+    var keys = Object.keys(weights).filter(function(k){ return EVENTS_BY_TIER[k] && EVENTS_BY_TIER[k].length; });
+    var total = keys.reduce(function(s,k){ return s+weights[k]; }, 0);
+    var r = Math.random()*total;
+    for(var i=0;i<keys.length;i++){
+      r -= weights[keys[i]];
+      if(r<=0) return keys[i];
+    }
+    return keys[keys.length-1];
+  }
+
+  function pickEventAvoiding(tierWeights, excludeSet){
+    var tier = weightedPick(tierWeights);
+    var pool = EVENTS_BY_TIER[tier];
+    var filtered = pool.filter(function(ev){ return !excludeSet.has(ev.id); });
+    if(filtered.length===0) filtered = pool;
+    return filtered[randInt(0, filtered.length-1)];
+  }
+
+  // Roll a concrete choice from an event definition: each effect gets a
+  // FIXED number right now (feedback #1) — this exact number is what is
+  // shown on the button AND what gets applied if chosen. Re-rolled fresh
+  // every time the event is drawn, so the same event shows different
+  // numbers on different appearances.
+  function rollChoice(ev){
+    return {
+      ev: ev,
+      rolled: ev.effects.map(function(eff){
+        return {stat:eff.stat, delta:randInt(eff.min, eff.max)};
+      })
+    };
+  }
+
+  /* ---------------- Game state ---------------- */
+  var state = {
+    difficulty:null,
+    stats:{producer:50, herbivore:50, carnivore:50, decomposer:50},
+    survivalSeconds:0,
+    roundCount:0,
+    prevChoiceIds:[],
+    currentChoices:[],
+    survivalStartTs:0,
+    roundStartTs:0,
+    roundDurationMs:0,
+    tickerId:null,
+    active:false
+  };
+
+  /* ---------------- DOM refs ---------------- */
+  var screenStart = document.getElementById('screen-start');
+  var screenGame  = document.getElementById('screen-game');
+  var screenEnd   = document.getElementById('screen-end');
+
+  var diffList = document.getElementById('diff-list');
+  var btnStart = document.getElementById('btn-start');
+
+  var survivalTimeEl = document.getElementById('survival-time');
+  var roundTagEl = document.getElementById('round-tag');
+  var warnBanner = document.getElementById('warn-banner');
+  var statGrid = document.getElementById('stat-grid');
+  var choicesEl = document.getElementById('choices');
+  var countdownBar = document.getElementById('countdown-bar');
+  var countdownNum = document.getElementById('countdown-num');
+  var toastEl = document.getElementById('toast');
+
+  var endEmoji = document.getElementById('end-emoji');
+  var endTitle = document.getElementById('end-title');
+  var endTime = document.getElementById('end-time');
+  var endDesc = document.getElementById('end-desc');
+  var endStatsTitle = document.getElementById('end-stats-title');
+  var endStatsEl = document.getElementById('end-stats');
+  var btnRestart = document.getElementById('btn-restart');
+  var btnToStart = document.getElementById('btn-to-start');
+
+  /* ---------------- Build stat cards ---------------- */
+  var statCardEls = {};
+  STAT_KEYS.forEach(function(key){
+    var info = STAT_INFO[key];
+    var card = document.createElement('div');
+    card.className = 'stat-card state-stable';
+    card.innerHTML =
+      '<div class="stat-head"><span class="ic">'+info.icon+'</span><span>'+info.name+'</span></div>'+
+      '<div class="stat-value-row">'+
+        '<span class="stat-value" id="val-'+key+'">50</span>'+
+        '<span class="stat-state-label state-stable" id="state-'+key+'">안정</span>'+
+      '</div>'+
+      '<div class="gauge-track" id="track-'+key+'">'+
+        '<div class="gauge-marker state-stable" id="marker-'+key+'" style="left:50%"></div>'+
+      '</div>';
+    statGrid.appendChild(card);
+    statCardEls[key] = {
+      root: card,
+      value: card.querySelector('#val-'+key),
+      stateLabel: card.querySelector('#state-'+key),
+      marker: card.querySelector('#marker-'+key),
+      track: card.querySelector('#track-'+key)
+    };
+  });
+
+  /* ---------------- Start screen logic ---------------- */
+  var selectedDiff = null;
+  diffList.addEventListener('click', function(e){
+    var card = e.target.closest('.diff-card');
+    if(!card) return;
+    selectedDiff = card.getAttribute('data-diff');
+    Array.prototype.forEach.call(diffList.querySelectorAll('.diff-card'), function(c){
+      c.classList.toggle('selected', c===card);
+    });
+    btnStart.disabled = false;
+  });
+
+  btnStart.addEventListener('click', function(){
+    if(!selectedDiff) return;
+    startGame(selectedDiff);
+  });
+
+  btnRestart.addEventListener('click', function(){
+    startGame(state.difficulty);
+  });
+  btnToStart.addEventListener('click', function(){
+    showScreen('start');
+  });
+
+  function showScreen(name){
+    screenStart.classList.toggle('hidden', name!=='start');
+    screenGame.classList.toggle('hidden', name!=='game');
+    screenEnd.classList.toggle('hidden', name!=='end');
+  }
+
+  /* ---------------- Toast ---------------- */
+  var toastTimer = null;
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 1800);
+  }
+
+  /* ---------------- Game flow ---------------- */
+  function startGame(diff){
+    state.difficulty = diff;
+    state.stats = {producer:50, herbivore:50, carnivore:50, decomposer:50};
+    state.survivalSeconds = 0;
+    state.roundCount = 0;
+    state.prevChoiceIds = [];
+    state.active = true;
+    state.roundDurationMs = DIFFICULTY[diff].seconds * 1000;
+    state.survivalStartTs = Date.now();
+    state.roundStartTs = Date.now();
+
+    clearInterval(state.tickerId);
+
+    STAT_KEYS.forEach(function(key){
+      var els = statCardEls[key];
+      els.root.className = 'stat-card state-stable';
+      els.marker.className = 'gauge-marker state-stable';
+      els.marker.style.left = '50%';
+      els.stateLabel.className = 'stat-state-label state-stable';
+      els.stateLabel.textContent = '안정';
+      els.value.textContent = '50';
+      els.value.className = 'stat-value state-stable';
+    });
+    warnBanner.classList.add('hidden');
+    survivalTimeEl.textContent = '00:00';
+
+    showScreen('game');
+
+    generateRoundChoices();
+    updateCountdownUI(state.roundDurationMs);
+
+    state.tickerId = setInterval(tick, 100);
+  }
+
+  // Single source of truth: everything (survival clock, choice countdown,
+  // and auto-selection on timeout) is derived from real wall-clock
+  // timestamps, so switching tabs / minimizing the window can't be used
+  // to "freeze" the choice timer while the survival clock keeps running.
+  function tick(){
+    if(!state.active) return;
+    var now = Date.now();
+    var goalDeadline = state.survivalStartTs + GOAL_SECONDS*1000;
+
+    var autoCount = 0;
+    var safety = 0;
+    while(state.active && (state.roundStartTs + state.roundDurationMs) <= Math.min(now, goalDeadline)){
+      safety++;
+      if(safety > 2000) break; // absolute safety valve
+      resolveRound(randInt(0, state.currentChoices.length-1), true);
+      autoCount++;
+      if(!state.active) break;
+    }
+    if(!state.active) return;
+
+    if(autoCount === 1){
+      showToast('⏱ 시간 초과 — 자동 선택되었습니다');
+    } else if(autoCount > 1){
+      showToast('⏱ 자리를 비운 사이 사건 ' + autoCount + '건이 자동으로 처리되었습니다');
+    }
+
+    var survivalElapsed = (now - state.survivalStartTs) / 1000;
+    if(survivalElapsed >= GOAL_SECONDS){
+      state.survivalSeconds = GOAL_SECONDS;
+      survivalTimeEl.textContent = fmtTime(GOAL_SECONDS);
+      endGame('success');
+      return;
+    }
+    state.survivalSeconds = Math.floor(survivalElapsed);
+    survivalTimeEl.textContent = fmtTime(state.survivalSeconds);
+
+    updateCountdownUI(state.roundStartTs + state.roundDurationMs - now);
+  }
+
+  function generateRoundChoices(){
+    state.roundCount++;
+    roundTagEl.textContent = '이벤트 ' + state.roundCount;
+
+    var excluded = new Set(state.prevChoiceIds);
+    var tierWeights = DIFFICULTY[state.difficulty].tierWeights;
+    var choices = [];
+    for(var i=0;i<3;i++){
+      var ev = pickEventAvoiding(tierWeights, excluded);
+      excluded.add(ev.id);
+      choices.push(rollChoice(ev));
+    }
+    state.currentChoices = choices;
+    state.prevChoiceIds = choices.map(function(c){ return c.ev.id; });
+    renderChoices(choices);
+  }
+
+  function renderChoices(choices){
+    choicesEl.innerHTML = '';
+    choices.forEach(function(choice, idx){
+      var ev = choice.ev;
+      var btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      var pillsHtml = choice.rolled.map(function(r){
+        var info = STAT_INFO[r.stat];
+        var cls = r.delta > 0 ? 'up' : (r.delta < 0 ? 'down' : '');
+        return '<span class="eff-pill '+cls+'">'+info.icon+' '+info.name+' '+fmtDelta(r.delta)+'</span>';
+      }).join('');
+      btn.innerHTML =
+        '<div class="c-name">'+ev.icon+' <span>'+ev.name+'</span></div>'+
+        '<div class="c-effects">'+pillsHtml+'</div>';
+      btn.addEventListener('click', function(){
+        if(!state.active) return;
+        resolveRound(idx, false);
+      });
+      choicesEl.appendChild(btn);
+    });
+  }
+
+  function updateCountdownUI(remainingMs){
+    remainingMs = Math.max(0, remainingMs);
+    var pct = (remainingMs / state.roundDurationMs) * 100;
+    countdownBar.style.width = pct + '%';
+    countdownNum.textContent = Math.ceil(remainingMs/1000);
+  }
+
+  // Applies the chosen (already-rolled) event, updates UI, checks for
+  // collapse, and — if the game is still active — starts the next round.
+  // Used for both manual clicks and automatic timeout selections.
+  function resolveRound(idx, wasAuto){
+    var choice = state.currentChoices[idx];
+    if(!choice) return;
+
+    var changed = {};
+    choice.rolled.forEach(function(r){
+      var before = state.stats[r.stat];
+      var after = clamp(before + r.delta);
+      state.stats[r.stat] = after;
+      changed[r.stat] = after - before;
+    });
+
+    STAT_KEYS.forEach(function(key){
+      updateStatUI(key, changed[key] || 0);
+    });
+    updateWarningBanner();
+
+    var collapsedStat = STAT_KEYS.find(function(k){ return state.stats[k]===0 || state.stats[k]===100; });
+    if(collapsedStat){
+      endGame('collapse');
+      return;
+    }
+
+    // Auto (timeout) resolutions happen inside tick()'s catch-up loop, which
+    // steps roundStartTs forward by exactly one roundDurationMs per missed
+    // round so the wall-clock math stays consistent even after a long
+    // background gap. A manual click, though, can land at any moment before
+    // that deadline — anchoring the next round to "now" (rather than adding
+    // a full roundDurationMs on top of the old start time) is what keeps
+    // every round's countdown at the fixed 8/6/4 seconds instead of
+    // stacking extra time each time the player answers quickly.
+    if(wasAuto){
+      state.roundStartTs += state.roundDurationMs;
+    } else {
+      state.roundStartTs = Date.now();
+    }
+    generateRoundChoices();
+  }
+
+  function updateStatUI(key, delta){
+    var v = state.stats[key];
+    var els = statCardEls[key];
+    var prevState = els.root.getAttribute('data-state') || 'stable';
+    var newState = getState(v);
+
+    els.value.textContent = v;
+    els.value.className = 'stat-value state-' + newState;
+    els.marker.style.left = v + '%';
+    els.marker.className = 'gauge-marker state-' + newState;
+    els.stateLabel.className = 'stat-state-label state-' + newState;
+    els.stateLabel.textContent = STATE_LABEL[newState];
+    els.root.className = 'stat-card state-' + newState;
+    els.root.setAttribute('data-state', newState);
+
+    if(delta !== 0){
+      var pop = document.createElement('div');
+      pop.className = 'pop-num ' + (delta>0 ? 'pos' : 'neg');
+      pop.textContent = fmtDelta(delta);
+      els.root.appendChild(pop);
+      pop.addEventListener('animationend', function(){ pop.remove(); });
+    }
+
+    var order = {stable:0, warning:1, danger:2, collapse:3};
+    if(order[newState] > order[prevState]){
+      els.root.classList.add('flash');
+      els.track.classList.add('pulse');
+      setTimeout(function(){
+        els.root.classList.remove('flash');
+        els.track.classList.remove('pulse');
+      }, 600);
+    }
+  }
+
+  function updateWarningBanner(){
+    var anyDanger = STAT_KEYS.some(function(k){ return getState(state.stats[k]) === 'danger'; });
+    warnBanner.classList.toggle('hidden', !anyDanger);
+  }
+
+  function endGame(type){
+    state.active = false;
+    clearInterval(state.tickerId);
+
+    // Snapshot of every stat at the moment the game ended.
+    var snapshot = {};
+    STAT_KEYS.forEach(function(k){ snapshot[k] = state.stats[k]; });
+    var collapsedStats = STAT_KEYS.filter(function(k){ return snapshot[k]===0 || snapshot[k]===100; });
+
+    endStatsEl.innerHTML = '';
+    STAT_KEYS.forEach(function(k){
+      var info = STAT_INFO[k];
+      var v = snapshot[k];
+      var isCause = collapsedStats.indexOf(k) !== -1;
+      var card = document.createElement('div');
+      card.className = 'end-stat-card' + (isCause ? ' cause' : '');
+      card.innerHTML =
+        '<div class="es-head">'+info.icon+' '+info.name+'</div>'+
+        '<div class="es-value">'+v+'</div>'+
+        (isCause ? '<div class="es-tag">붕괴 지점</div>' : '');
+      endStatsEl.appendChild(card);
+    });
+
+    if(type==='success'){
+      endEmoji.textContent = '🌍';
+      endTitle.textContent = '생태계 균형 유지 성공!';
+      endTitle.className = 'end-title ok';
+      endTime.textContent = fmtTime(GOAL_SECONDS);
+      endDesc.textContent = '['+DIFFICULTY_LABEL[state.difficulty]+'] 난이도에서 3분 동안 생태계의 균형을 성공적으로 유지했습니다.';
+      endStatsTitle.textContent = '게임 종료 시점의 각 요소 수치';
+      showScreen('end');
+    } else {
+      var names = collapsedStats.map(function(k){ return STAT_INFO[k].icon+' '+STAT_INFO[k].name; }).join(', ');
+      endEmoji.textContent = '💀';
+      endTitle.textContent = '생태계 붕괴';
+      endTitle.className = 'end-title bad';
+      endTime.textContent = fmtTime(state.survivalSeconds);
+      endDesc.textContent = names
+        ? (names + ' 요소가 한계치에 도달해 생태계가 무너졌습니다.')
+        : '생태계의 균형이 무너졌습니다.';
+      endStatsTitle.textContent = '붕괴 순간의 각 요소 수치';
+      showScreen('end');
+      screenEnd.classList.add('collapse-flash');
+      setTimeout(function(){ screenEnd.classList.remove('collapse-flash'); }, 500);
+    }
+  }
+
+  // Catch up immediately when the tab regains visibility, instead of
+  // waiting for the next 100ms tick — this is what actually closes the
+  // "switch tabs and wait" loophole (feedback #3).
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible' && state.active){
+      tick();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
