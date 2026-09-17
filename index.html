@@ -261,6 +261,15 @@
   .end-stat-card.cause{ border-color:var(--danger); background:#241614; }
   .end-stat-card .es-head{ font-size:12px; color:var(--ink-dim); margin-bottom:2px; }
   .end-stat-card .es-value{ font-family:var(--font-mono); font-weight:700; font-size:24px; }
+  .end-stat-card .es-value.state-stable{ color:var(--stable); }
+  .end-stat-card .es-value.state-warning{ color:var(--warning); }
+  .end-stat-card .es-value.state-danger{ color:var(--danger); }
+  .end-stat-card .es-value.state-collapse{ color:#fff; }
+  .end-stat-card .es-state{ font-size:11px; font-weight:700; letter-spacing:.3px; margin-top:1px; }
+  .end-stat-card .es-state.state-stable{ color:var(--stable); }
+  .end-stat-card .es-state.state-warning{ color:var(--warning); }
+  .end-stat-card .es-state.state-danger{ color:var(--danger); }
+  .end-stat-card .es-state.state-collapse{ color:#fff; }
   .end-stat-card .es-tag{ font-size:10.5px; margin-top:2px; color:var(--danger); font-weight:700; }
 
   .end-buttons{ width:100%; }
@@ -825,12 +834,14 @@
     STAT_KEYS.forEach(function(k){
       var info = STAT_INFO[k];
       var v = snapshot[k];
+      var vState = getState(v);
       var isCause = collapsedStats.indexOf(k) !== -1;
       var card = document.createElement('div');
       card.className = 'end-stat-card' + (isCause ? ' cause' : '');
       card.innerHTML =
         '<div class="es-head">'+info.icon+' '+info.name+'</div>'+
-        '<div class="es-value">'+v+'</div>'+
+        '<div class="es-value state-'+vState+'">'+v+'</div>'+
+        '<div class="es-state state-'+vState+'">'+STATE_LABEL[vState]+'</div>'+
         (isCause ? '<div class="es-tag">붕괴 지점</div>' : '');
       endStatsEl.appendChild(card);
     });
